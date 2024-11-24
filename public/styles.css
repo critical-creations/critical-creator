@@ -1,0 +1,18 @@
+/* styles.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+table {
+    border-collapse: collapse;
+  }
+  
+  thead {
+    font-weight: bold;
+  }
+  
+  input[type="file"] {
+    transition: all 0.2s ease-in-out;
+  }
+  
