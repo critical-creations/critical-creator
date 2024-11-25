@@ -45,7 +45,8 @@ function createWindow () {
   });
   
   ipcMain.handle('generate-video', async (event, videos, mapCode, widgets) => {
-    let progress = 10;
+    let progress = 1;
+    const total_steps = 4;
 
     if (!videos || videos.length < 2) {
       event.reply('generate-video-error', 'At least 2 videos should beselected!');
@@ -62,34 +63,35 @@ function createWindow () {
       return;
     }
     
-    mainWindow.webContents.send('video-progress', progress, 'Adding blurred background...');
+    mainWindow.webContents.send('video-progress', `${progress}/${total_steps}`, 'Adding blurred background...');
 
     preprocessVideos(videos)
 
       .then(({ processedVideos, tempDir }) => {
         console.log('Videos processed:', processedVideos);
-        progress += 25
-        mainWindow.webContents.send('video-progress', progress, 'Adding widgets...');
+        progress++;
+        mainWindow.webContents.send('video-progress', `${progress}/${total_steps}`, 'Adding widgets...');
         return addWidgets(processedVideos, tempDir, widgets)
       })
   
       .then(({ widgetVideos, tempDir }) => {
         console.log('Widgets added:', widgetVideos); 
-        progress += 35
-        mainWindow.webContents.send('video-progress', progress, 'Adding videos together...');
+        progress++;
+        mainWindow.webContents.send('video-progress', `${progress}/${total_steps}`, 'Adding videos together...');
         return concatenateVideos(widgetVideos, tempDir)
       })
 
       .then((concatenatedVideoPath) => {
         console.log('Videos concatenated:', concatenatedVideoPath); 
-        progress += 20;
-        mainWindow.webContents.send('video-progress', progress, 'Adding map code...');
+        progress++;
+        mainWindow.webContents.send('video-progress', `${progress}/${total_steps}`, 'Adding map code...');
         return addMapCode(concatenatedVideoPath, savePath, `MAP CODE\\: ${mapCode}`);
       })
   
       .then((finalVideoPath) => {
         console.log('Text added, final video saved at:', finalVideoPath);
-        mainWindow.webContents.send('video-progress', 100, 'Finished!');
+        progress++;
+        mainWindow.webContents.send('video-progress', '100%', 'Finished!');
         mainWindow.webContents.send('video-generated', finalVideoPath);
         return finalVideoPath;
       })

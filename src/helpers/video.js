@@ -45,7 +45,6 @@ async function addWidgets(videos, prevTempDir, widgets) {
     fs.mkdirSync(tempDir); // Ensure the temp directory exists
   }
 
-  // todo support for when widget is undefined
   const widgetVideos = await Promise.all(
     videos.map((video, index) => {
       const tempPath = path.join(tempDir, `widgets_${index}.mp4`);
@@ -56,16 +55,22 @@ async function addWidgets(videos, prevTempDir, widgets) {
         const scaledWidth = (videoWidth * 7) / 10; // 4/5 of the video width
         const scaledHeight = '-1'; // Keep the aspect ratio of the widget video
 
-        ffmpeg()
-          .input(video)
-          .input(widgets[index])
-          .inputOptions('-framerate 30')
-          .complexFilter([
-            // Scale the widget to 4/5 the width of the video, maintaining aspect ratio
-            `[1:v]scale=${scaledWidth}:${scaledHeight}[widget];` +
-            // Overlay the widget on the video
-            `[0:v][widget]overlay=(main_w-overlay_w)/2:150`
-          ])
+        const ffmpegCommand = ffmpeg().input(video);
+
+        // add widget if its defined
+        if (widgets[index]) {
+          ffmpegCommand
+            .input(widgets[index])
+            .inputOptions('-framerate 30')
+            .complexFilter([
+              // Scale the widget to 4/5 the width of the video, maintaining aspect ratio
+              `[1:v]scale=${scaledWidth}:${scaledHeight}[widget];` +
+              // Overlay the widget on the video
+              `[0:v][widget]overlay=(main_w-overlay_w)/2:150`
+            ])
+        }
+        
+        ffmpegCommand
           .outputOptions([
             '-r 30', // Normalize frame rate
             '-c:v libx264', // Use H.264 codec

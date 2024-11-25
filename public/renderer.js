@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   window.electronAPI.receive('video-progress', (progress, action) => {
     const progressText = document.getElementById('progressText')
-    progressText.innerHTML = `${progress}% - ${action}`
+    progressText.innerHTML = `Step ${progress} - ${action}`
 
     if (progress === 100) {
       const spinner = document.getElementById('spinner')
