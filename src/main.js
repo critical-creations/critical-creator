@@ -1,6 +1,6 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
-const { preprocessVideos, concatenateVideos, cleanupTempFiles } = require('./helpers/video.js');
+const { preprocessVideos, concatenateVideos, addMapCode } = require('./helpers/video.js');
 const path = require('node:path')
 const ffmpegPath = require('ffmpeg-static');
 const ffmpeg = require('fluent-ffmpeg');
@@ -28,9 +28,72 @@ function createWindow () {
   mainWindow.loadFile(path.join(__dirname, '../public/index.html'))
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 
   mainWindow.maximize();
+
+  ipcMain.handle('select-file', async (event, filters = []) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile'], // Single file selection
+      filters: filters.length > 0 ? filters : undefined, // Dynamic filters
+    });
+  
+    if (canceled) {
+      return null; // Return null if the user cancels the dialog
+    }
+    return filePaths[0]; // Return the first selected file's path
+  });
+  
+  ipcMain.handle('generate-video', async (event, videos, mapCode) => {
+    let progress = 10;
+
+    if (!videos || videos.length < 2) {
+      event.reply('generate-video-error', 'At least 2 videos should beselected!');
+      return;
+    }
+  
+    const savePath = dialog.showSaveDialogSync({
+      title: 'Save Output Video',
+      defaultPath: 'output.mp4',
+      filters: [{ name: 'Videos', extensions: ['mp4'] }],
+    });
+  
+    if (!savePath) {
+      event.reply('generate-video-error', 'Save path not specified.');
+      return;
+    }
+    
+    mainWindow.webContents.send('video-progress', progress, 'Adding blurred background...');
+
+    preprocessVideos(videos)
+  
+      .then(({ processedVideos, tempDir }) => {
+        console.log('Videos processed:', processedVideos);
+        progress += 50
+        mainWindow.webContents.send('video-progress', progress, 'Adding videos together...');
+        return concatenateVideos(processedVideos, savePath, tempDir, )
+      })
+  
+      .then((concatenatedVideoPath) => {
+        console.log('Videos concatenated:', concatenatedVideoPath);   
+        progress += 20
+        mainWindow.webContents.send('video-progress', progress, 'Adding map code...');
+        return addMapCode(concatenatedVideoPath, savePath, `MAP CODE\\: ${mapCode}`);
+      })
+  
+      .then((finalVideoPath) => {
+        console.log('Text added, final video saved at:', finalVideoPath);
+        mainWindow.webContents.send('video-progress', 100, 'Finished!');
+        mainWindow.webContents.send('video-generated', finalVideoPath);
+        return finalVideoPath;
+      })
+    
+      .catch((err) => {
+        console.error('Error processing videos:', err.message);
+        return err;
+      });
+  });
+  
 }
 
 // This method will be called when Electron has finished
@@ -52,43 +115,3 @@ app.whenReady().then(() => {
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
-
-ipcMain.handle('select-file', async (event, filters = []) => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
-    properties: ['openFile'], // Single file selection
-    filters: filters.length > 0 ? filters : undefined, // Dynamic filters
-  });
-
-  if (canceled) {
-    return null; // Return null if the user cancels the dialog
-  }
-  return filePaths[0]; // Return the first selected file's path
-});
-
-ipcMain.on('generate-video', async (event, videos) => {
-  if (!videos || videos.length < 2) {
-    event.reply('generate-video-error', 'At least 2 videos should beselected!');
-    return;
-  }
-
-  const savePath = dialog.showSaveDialogSync({
-    title: 'Save Output Video',
-    defaultPath: 'output.mp4',
-    filters: [{ name: 'Videos', extensions: ['mp4'] }],
-  });
-
-  if (!savePath) {
-    event.reply('generate-video-error', 'Save path not specified.');
-    return;
-  }
-  
-  preprocessVideos(videos)
-  .then(({ processedVideos, tempDir }) => {
-    console.log('Videos processed:', processedVideos);
-    return concatenateVideos(processedVideos, savePath, tempDir)
-  })
-  
-  .catch((err) => {
-    console.error('Error processing videos:', err.message);
-  });
-});

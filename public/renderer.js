@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const uploadTable = document.getElementById('upload-table');
   const addClipBtn = document.getElementById('add-clip-btn');
   const generateVideoBtn = document.getElementById('generate-video-btn');
+  const mapCodeInput = document.getElementById('map-code');
   var videoIndex = 0;
 
   generateVideoBtn.addEventListener('click', () => {
@@ -14,9 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Please select at least two videos!');
       return;
     }
-  
+
+    setCreateVideoState(false);
+
+    const spinner = document.getElementById('spinner')
+    spinner.classList.remove('hidden')
+
     // Send selected videos to main process
-    window.electronAPI.send('generate-video', videoPaths);
+    window.electronAPI.generateVideo(videoPaths, mapCodeInput.value);
+    
   });
 
   // Helper to create a table row
@@ -126,14 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Handle success and error responses
-  window.electronAPI.receive('generate-video-success', (outputPath) => {
+  window.electronAPI.receive('video-generated', (outputPath) => {
     alert(`Video successfully generated: ${outputPath}`);
+    setCreateVideoState(true);
   });
   
-  window.electronAPI.receive('generate-video-error', (error) => {
-    alert(`Error generating video: ${error}`);
+  window.electronAPI.receive('video-progress', (progress, action) => {
+    const progressText = document.getElementById('progressText')
+    progressText.innerHTML = `${progress}% - ${action}`
+
+    if (progress === 100) {
+      const spinner = document.getElementById('spinner')
+      spinner.classList.add('hidden');
+    }
   });
+
 
   const setCreateVideoState = (enable) => {
     if (enable) {
