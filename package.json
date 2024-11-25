@@ -1,6 +1,6 @@
 {
   "name": "critical-creator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Video Gen for Critical Creations",
   "main": "src/main.js",
   "scripts": {
@@ -39,7 +39,15 @@
       "src/**/*",
       "package.json",
       "public/*",
-      "public/**/*"
+      "public/**/*",
+      "assets/fonts/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": ["**/*"]
+      }
     ],
     "win": {
       "target": "nsis",

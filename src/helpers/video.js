@@ -1,4 +1,4 @@
-const path = require('node:path')
+const path = require('path')
 const ffmpegPath = require('ffmpeg-static').replace(
   'app.asar',
   'app.asar.unpacked'
@@ -142,7 +142,7 @@ function concatenateVideos(videos, tempDir) {
 function addMapCode(inputVideo, outputVideo, text) {
   return new Promise((resolve, reject) => {
 
-    const fontPath = path.join(__dirname, '../../assets/fonts', 'Fortnite.ttf').replace(/\\/g, '\\\\').replace(/:/g, '\\:');
+    const fontPath = path.join(process.resourcesPath, 'assets/fonts/fortnite.ttf').replace(/\\/g, '\\\\').replace(/:/g, '\\:');
 
     ffmpeg(inputVideo)
       .output(outputVideo)
