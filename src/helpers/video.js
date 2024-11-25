@@ -17,7 +17,6 @@ async function preprocessVideos(videos) {
         const tempPath = path.join(tempDir, `processed_${index}.mp4`);
         return new Promise((resolve, reject) => {
           ffmpeg(video)
-            // TODO zoom in the foreground vid
             .complexFilter([
               '[0:v]scale=iw:2*trunc(iw*16/18),boxblur=luma_radius=min(h\\,w)/20:luma_power=1:chroma_radius=min(cw\\,ch)/20:chroma_power=1[bg];[0:v]scale=iw*1.7:ih*1.7[zoomed];[bg][zoomed]overlay=(W-w)/2:(H-h)/2,setsar=1'
             ])
@@ -28,6 +27,7 @@ async function preprocessVideos(videos) {
                 '-preset fast', // Optimize encoding speed
                 '-c:a aac', // Normalize audio codec
                 '-b:a 128k', // Set audio bitrate
+                '-s 1080x1920', // set resolution
               ])
             .save(tempPath)
             .on('end', () => resolve(tempPath))
@@ -37,6 +37,57 @@ async function preprocessVideos(videos) {
     );
   
     return { processedVideos, tempDir }; // Return temp directory for cleanup
+}
+
+async function addWidgets(videos, prevTempDir, widgets) {
+  const tempDir = path.join(os.tmpdir(), 'video_widgets');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir); // Ensure the temp directory exists
+  }
+
+  // todo support for when widget is undefined
+  const widgetVideos = await Promise.all(
+    videos.map((video, index) => {
+      const tempPath = path.join(tempDir, `widgets_${index}.mp4`);
+
+      return new Promise((resolve, reject) => {
+
+        const videoWidth = 1080;
+        const scaledWidth = (videoWidth * 7) / 10; // 4/5 of the video width
+        const scaledHeight = '-1'; // Keep the aspect ratio of the widget video
+
+        ffmpeg()
+          .input(video)
+          .input(widgets[index])
+          .inputOptions('-framerate 30')
+          .complexFilter([
+            // Scale the widget to 4/5 the width of the video, maintaining aspect ratio
+            `[1:v]scale=${scaledWidth}:${scaledHeight}[widget];` +
+            // Overlay the widget on the video
+            `[0:v][widget]overlay=(main_w-overlay_w)/2:150`
+          ])
+          .outputOptions([
+            '-r 30', // Normalize frame rate
+            '-c:v libx264', // Use H.264 codec
+            '-crf 23', // Set constant rate factor for quality
+            '-preset fast', // Optimize encoding speed
+            '-c:a aac', // Normalize audio codec
+            '-b:a 128k', // Set audio bitrate
+          ])
+          .save(tempPath)
+          .on('end', () => {
+            // cleanupTempFiles(prevTempDir);
+            resolve(tempPath);
+          })
+          .on('error', (err) => {
+            // cleanupTempFiles(prevTempDir);
+            reject(err);
+          });
+      });
+    }),
+  );
+
+  return { widgetVideos, tempDir }; // Return temp directory for cleanup
 }
 
 function concatenateVideos(videos, tempDir) {
@@ -83,7 +134,7 @@ function concatenateVideos(videos, tempDir) {
 function addMapCode(inputVideo, outputVideo, text) {
   return new Promise((resolve, reject) => {
 
-    const fontPath = path.join(__dirname, '../../assets/fonts', 'Fortnite.ttf').replace(/\\/g, '\\\\').replace(/:/g, '\\:');;
+    const fontPath = path.join(__dirname, '../../assets/fonts', 'Fortnite.ttf').replace(/\\/g, '\\\\').replace(/:/g, '\\:');
 
     ffmpeg(inputVideo)
       .output(outputVideo)
@@ -109,4 +160,4 @@ function cleanupTempFiles(tempDir) {
     console.log(`Temporary files cleaned up: ${tempDir}`);
 }
 
-module.exports = { preprocessVideos, concatenateVideos, addMapCode };
+module.exports = { preprocessVideos, concatenateVideos, addWidgets, addMapCode };

@@ -1,6 +1,6 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
-const { preprocessVideos, concatenateVideos, addMapCode } = require('./helpers/video.js');
+const { preprocessVideos, concatenateVideos, addWidgets, addMapCode } = require('./helpers/video.js');
 const path = require('node:path')
 const ffmpegPath = require('ffmpeg-static');
 const ffmpeg = require('fluent-ffmpeg');
@@ -44,7 +44,7 @@ function createWindow () {
     return filePaths[0]; // Return the first selected file's path
   });
   
-  ipcMain.handle('generate-video', async (event, videos, mapCode) => {
+  ipcMain.handle('generate-video', async (event, videos, mapCode, widgets) => {
     let progress = 10;
 
     if (!videos || videos.length < 2) {
@@ -59,24 +59,30 @@ function createWindow () {
     });
   
     if (!savePath) {
-      event.reply('generate-video-error', 'Save path not specified.');
       return;
     }
     
     mainWindow.webContents.send('video-progress', progress, 'Adding blurred background...');
 
     preprocessVideos(videos)
-  
+
       .then(({ processedVideos, tempDir }) => {
         console.log('Videos processed:', processedVideos);
-        progress += 50
-        mainWindow.webContents.send('video-progress', progress, 'Adding videos together...');
-        return concatenateVideos(processedVideos, savePath, tempDir, )
+        progress += 25
+        mainWindow.webContents.send('video-progress', progress, 'Adding widgets...');
+        return addWidgets(processedVideos, tempDir, widgets)
       })
   
+      .then(({ widgetVideos, tempDir }) => {
+        console.log('Widgets added:', widgetVideos); 
+        progress += 35
+        mainWindow.webContents.send('video-progress', progress, 'Adding videos together...');
+        return concatenateVideos(widgetVideos, tempDir)
+      })
+
       .then((concatenatedVideoPath) => {
-        console.log('Videos concatenated:', concatenatedVideoPath);   
-        progress += 20
+        console.log('Videos concatenated:', concatenatedVideoPath); 
+        progress += 20;
         mainWindow.webContents.send('video-progress', progress, 'Adding map code...');
         return addMapCode(concatenatedVideoPath, savePath, `MAP CODE\\: ${mapCode}`);
       })

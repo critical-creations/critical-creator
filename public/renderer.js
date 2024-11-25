@@ -21,8 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const spinner = document.getElementById('spinner')
     spinner.classList.remove('hidden')
 
+    // create a list of the widgets
+    const widgetInputButtons = document.getElementsByClassName('widgetInputButton')
+    const widgetPaths = Array.from(widgetInputButtons)
+      .map(input => {
+        return input?input.path:undefined
+      });
+    
     // Send selected videos to main process
-    window.electronAPI.generateVideo(videoPaths, mapCodeInput.value);
+    window.electronAPI.generateVideo(videoPaths, mapCodeInput.value, widgetPaths);
     
   });
 
@@ -32,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     row.className = 'border-b border-gray-700';
     const videoButtonId = `selectVideoButton-${videoIndex}`;
     const videoDisplayId = `selectVideoDisplay-${videoIndex}`;
+    const widgetButtonId = `selectWidgetButton-${videoIndex}`;
+    const widgetDisplayId = `selectWidgetDisplay-${videoIndex}`;
 
     row.innerHTML = `
       <td class="px-4 py-4">
@@ -56,14 +65,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Button -->
         <label>
           <span
-            id="selectWidgetButton-${videoIndex}"
-            class="fileInputButton inline-block px-4 py-2 bg-blue-600 text-white font-medium text-center rounded-md cursor-pointer hover:bg-blue-500 active:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-400"
+            id="${widgetButtonId}"
+            class="fileInputButton widgetInputButton inline-block px-4 py-2 bg-blue-600 text-white font-medium text-center rounded-md cursor-pointer hover:bg-blue-500 active:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-400"
           >
             Select Widget
           </span>
         </label>
         <!-- File Name Display -->
-        <span id="id="selectWidgetButton-display-${videoIndex}" class="text-gray-200 text-base font-semibold file-name truncate max-w-[8rem] overflow-hidden whitespace-nowrap">No widget selected</span>
+        <span id="${widgetDisplayId}" class="text-gray-200 text-base font-semibold file-name truncate max-w-[8rem] overflow-hidden whitespace-nowrap">No widget selected</span>
       </div>
     </td>
 
@@ -92,7 +101,22 @@ document.addEventListener('DOMContentLoaded', () => {
         checkGenerateVideoState();
         
         const videoDisplay = document.getElementById(videoDisplayId);
-        videoDisplay.textContent = truncateFileName(filePath, 30); // Update file display
+        videoDisplay.textContent = truncateFileName(filePath, 50); // Update file display
+      }
+    });
+
+    // Attach event listener to the select widget button
+    const widgetButton = document.getElementById(widgetButtonId);
+    widgetButton.addEventListener('click', async () => {
+      const filters = [{ name: 'Photos', extensions: ['png', 'jpg', 'jpeg'] }]; // Example filters
+      const filePath = await window.electronAPI.selectFile(filters);
+
+      if (filePath) {
+        widgetButton.path = filePath;
+        checkGenerateVideoState();
+        
+        const widgetDisplay = document.getElementById(widgetDisplayId);
+        widgetDisplay.textContent = truncateFileName(filePath, 50); // Update file display
       }
     });
 
