@@ -1,6 +1,3 @@
-
-
-
 document.addEventListener('DOMContentLoaded', () => {
   const uploadTable = document.getElementById('upload-table');
   const addClipBtn = document.getElementById('add-clip-btn');
@@ -13,8 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
       .map(input => input.path) // Extract the path of the first file (if it exists)
       .filter(path => path);
 
-    if (videoPaths.length === 0) {
-      alert('Please select at least one video!');
+    if (videoPaths.length < 2) {
+      alert('Please select at least two videos!');
       return;
     }
   
@@ -85,18 +82,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (filePath) {
         videoButton.path = filePath;
-        setCreateVideoState(true);
+        checkGenerateVideoState();
+        
         const videoDisplay = document.getElementById(videoDisplayId);
         videoDisplay.textContent = truncateFileName(filePath, 30); // Update file display
       }
     });
 
     // Attach event listener to the remove button
+    const container = document.getElementById('upload-table')
     const removeButton = document.getElementById(`remove-btn-${videoIndex}`);
     removeButton.addEventListener('click', () => {
       if (container.children.length > 1) {
         container.removeChild(row); // Remove the row
-        //TODO check if this is last row, if so call setCreateVideoState(false)
+        checkGenerateVideoState();
+
       } else {
         alert('At least one row must remain.');
       }
@@ -106,7 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-  // Add the first row initially
+  // Add the first two rows initially
+  createTableRow();
   createTableRow();
 
   // Add new row on button click
@@ -145,6 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
       generateVideoBtn.classList.remove('bg-green-600', 'text-white', 'hover:bg-green-500', 'active:bg-green-700');
     }
   };
+
+  const checkGenerateVideoState = () => {
+    const videoInputButtons = document.getElementsByClassName('videoInputButton')
+    const videoPaths = Array.from(videoInputButtons)
+      .map(input => input.path) // Extract the path of the first file (if it exists)
+      .filter(path => path);
+
+    setCreateVideoState(videoPaths.length >= 2);
+  }
 
 });
 

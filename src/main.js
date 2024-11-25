@@ -1,9 +1,9 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
+const { preprocessVideos, concatenateVideos, cleanupTempFiles } = require('./helpers/video.js');
 const path = require('node:path')
 const ffmpegPath = require('ffmpeg-static');
 const ffmpeg = require('fluent-ffmpeg');
-const fs = require('fs');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -66,13 +66,13 @@ ipcMain.handle('select-file', async (event, filters = []) => {
 });
 
 ipcMain.on('generate-video', async (event, videos) => {
-  if (!videos || videos.length === 0) {
-    event.reply('generate-video-error', 'No videos selected!');
+  if (!videos || videos.length < 2) {
+    event.reply('generate-video-error', 'At least 2 videos should beselected!');
     return;
   }
 
   const savePath = dialog.showSaveDialogSync({
-    title: 'Save Concatenated Video',
+    title: 'Save Output Video',
     defaultPath: 'output.mp4',
     filters: [{ name: 'Videos', extensions: ['mp4'] }],
   });
@@ -81,29 +81,14 @@ ipcMain.on('generate-video', async (event, videos) => {
     event.reply('generate-video-error', 'Save path not specified.');
     return;
   }
-
-  const ffmpegCommand = ffmpeg();
-
-  videos.forEach((video) => {
-    ffmpegCommand.input(video); // Add video inputs directly
+  
+  preprocessVideos(videos)
+  .then(({ processedVideos, tempDir }) => {
+    console.log('Videos processed:', processedVideos);
+    return concatenateVideos(processedVideos, savePath, tempDir)
+  })
+  
+  .catch((err) => {
+    console.error('Error processing videos:', err.message);
   });
-
-  // Concatenate videos using FFmpeg
-  ffmpeg()
-    .inputOptions('-safe 0')
-    .outputOptions('-f concat')
-    .outputOptions('-c copy')
-    .save(savePath)
-    .on('start', (cmd) => {
-      console.log('FFmpeg command:', cmd);
-    })
-    .on('end', () => {
-      fs.unlinkSync(tempFileList); // Clean up the temp file
-      event.reply('generate-video-success', savePath);
-    })
-    .on('error', (err) => {
-      fs.unlinkSync(tempFileList); // Clean up on error
-      event.reply('generate-video-error', `Error: ${err.message}`);
-    })
-    .run();
 });
