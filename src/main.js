@@ -2,7 +2,10 @@
 const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
 const { preprocessVideos, concatenateVideos, addWidgets, addMapCode } = require('./helpers/video.js');
 const path = require('node:path')
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegPath = require('ffmpeg-static').replace(
+  'app.asar',
+  'app.asar.unpacked'
+);
 const ffmpeg = require('fluent-ffmpeg');
 
 ffmpeg.setFfmpegPath(ffmpegPath);

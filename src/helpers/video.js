@@ -1,5 +1,8 @@
 const path = require('node:path')
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegPath = require('ffmpeg-static').replace(
+  'app.asar',
+  'app.asar.unpacked'
+);
 const ffmpeg = require('fluent-ffmpeg');
 const os = require('os');
 const fs = require('fs');
