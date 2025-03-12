@@ -24,7 +24,7 @@
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15"
+    "tailwindcss": "^4.0.13"
   },
   "build": {
     "appId": "be.silasdevuyst.critical-creator",
