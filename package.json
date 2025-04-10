@@ -14,7 +14,7 @@
   "license": "CC0-1.0",
   "devDependencies": {
     "autoprefixer": "^10.4.20",
-    "electron": "^33.2.0",
+    "electron": "^35.1.5",
     "postcss-cli": "^11.0.0"
   },
   "dependencies": {
